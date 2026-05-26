@@ -1,6 +1,10 @@
 #include "estructuras.h"
 #include <iostream>
 
+// ==========================================
+// IMPLEMENTACIÓN: ÁRBOL DE CAPAS
+// ==========================================
+
 ArbolCapas::ArbolCapas() {
     raiz = nullptr;
 }
@@ -9,7 +13,11 @@ NodoArbolCapas* ArbolCapas::insertarRecursivo(NodoArbolCapas* nodo, int id) {
     if (nodo == nullptr) {
         NodoArbolCapas* nuevo = new NodoArbolCapas();
         nuevo->idCapa = id;
-        nuevo->raizMatriz = nullptr;
+        
+        // CONEXIÓN: Cada capa se inicializa con su propia Matriz Dispersa viva
+        MatrizDispersa* nuevaMatriz = new MatrizDispersa();
+        nuevo->raizMatriz = nuevaMatriz->getRaiz();
+        
         nuevo->izquierdo = nullptr;
         nuevo->derecho = nullptr;
         return nuevo;
@@ -44,6 +52,9 @@ NodoArbolCapas* ArbolCapas::getRaiz() {
     return raiz;
 }
 
+// ==========================================
+// IMPLEMENTACIÓN: LISTA CIRCULAR DE IMÁGENES
+// ==========================================
 
 ListaImagenes::ListaImagenes() {
     primero = nullptr;
@@ -122,6 +133,9 @@ NodoImagen* ListaImagenes::getPrimero() {
     return primero;
 }
 
+// ==========================================
+// IMPLEMENTACIÓN: ÁRBOL DE USUARIOS
+// ==========================================
 
 ArbolUsuarios::ArbolUsuarios() {
     raiz = nullptr;
@@ -179,5 +193,114 @@ void ArbolUsuarios::agregarImagenAUsuario(std::string nombreUsuario, int idImage
 }
 
 NodoUsuario* ArbolUsuarios::getRaiz() {
+    return raiz;
+}
+
+// ==========================================
+// IMPLEMENTACIÓN: MATRIZ DISPERSA
+// ==========================================
+
+MatrizDispersa::MatrizDispersa() {
+    raiz = new NodoMatriz();
+    raiz->fila = -1;
+    raiz->columna = -1;
+    raiz->colorHex = "RAIZ";
+    raiz->arriba = raiz;
+    raiz->abajo = raiz;
+    raiz->izquierda = raiz;
+    raiz->derecha = raiz;
+}
+
+NodoMatriz* MatrizDispersa::crearCabeceraFila(int fila) {
+    NodoMatriz* actual = raiz;
+    
+    while (actual->abajo != raiz && actual->abajo->fila < fila) {
+        actual = actual->abajo;
+    }
+
+    if (actual->abajo != raiz && actual->abajo->fila == fila) {
+        return actual->abajo;
+    }
+
+    NodoMatriz* nuevaFila = new NodoMatriz();
+    nuevaFila->fila = fila;
+    nuevaFila->columna = -1;
+    nuevaFila->colorHex = "FILA";
+    
+    nuevaFila->abajo = actual->abajo;
+    actual->abajo->arriba = nuevaFila;
+    nuevaFila->arriba = actual;
+    actual->abajo = nuevaFila;
+
+    nuevaFila->izquierda = nuevaFila;
+    nuevaFila->derecha = nuevaFila;
+
+    return nuevaFila;
+}
+
+NodoMatriz* MatrizDispersa::crearCabeceraColumna(int columna) {
+    NodoMatriz* actual = raiz;
+
+    while (actual->derecha != raiz && actual->derecha->columna < columna) {
+        actual = actual->derecha;
+    }
+
+    if (actual->derecha != raiz && actual->derecha->columna == columna) {
+        return actual->derecha;
+    }
+
+    NodoMatriz* nuevaColumna = new NodoMatriz();
+    nuevaColumna->fila = -1;
+    nuevaColumna->columna = columna;
+    nuevaColumna->colorHex = "COL";
+
+    nuevaColumna->derecha = actual->derecha;
+    actual->derecha->izquierda = nuevaColumna;
+    nuevaColumna->izquierda = actual;
+    actual->derecha = nuevaColumna;
+
+    nuevaColumna->arriba = nuevaColumna;
+    nuevaColumna->abajo = nuevaColumna;
+
+    return nuevaColumna;
+}
+
+void MatrizDispersa::insertarPixel(int fila, int columna, std::string colorHex) {
+    NodoMatriz* cabFila = crearCabeceraFila(fila);
+    NodoMatriz* cabCol = crearCabeceraColumna(columna);
+
+    NodoMatriz* nuevoPixel = new NodoMatriz();
+    nuevoPixel->fila = fila;
+    nuevoPixel->columna = columna;
+    nuevoPixel->colorHex = colorHex;
+
+    NodoMatriz* auxHoriz = cabFila;
+    while (auxHoriz->derecha != cabFila && auxHoriz->derecha->columna < columna) {
+        auxHoriz = auxHoriz->derecha;
+    }
+    
+    if (auxHoriz->derecha != cabFila && auxHoriz->derecha->columna == columna) {
+        auxHoriz->derecha->colorHex = colorHex;
+        delete nuevoPixel;
+        return;
+    }
+
+    nuevoPixel->derecha = auxHoriz->derecha;
+    auxHoriz->derecha->izquierda = nuevoPixel;
+    nuevoPixel->izquierda = auxHoriz;
+    auxHoriz->derecha = nuevoPixel;
+
+    NodoMatriz* auxVert = cabCol;
+    while (auxVert->abajo != cabCol && auxVert->abajo->fila < fila) {
+        auxVert = auxVert->abajo;
+    }
+
+    nuevoPixel->abajo = auxVert->abajo;
+    auxVert->abajo->arriba = nuevoPixel;
+    nuevoPixel->arriba = auxVert;
+    auxVert->abajo = nuevoPixel;
+}
+
+NodoMatriz* MatrizDispersa::getRaiz() {
     return raiz;
 }

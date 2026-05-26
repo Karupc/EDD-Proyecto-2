@@ -48,6 +48,18 @@ struct NodoUsuario {
     NodoUsuario* derecho;
 };
 
+class MatrizDispersa {
+private:
+    NodoMatriz* raiz;
+
+    NodoMatriz* crearCabeceraFila(int fila);
+    NodoMatriz* crearCabeceraColumna(int columna);
+
+public:
+    MatrizDispersa();
+    void insertarPixel(int fila, int columna, std::string colorHex);
+    NodoMatriz* getRaiz();
+};
 
 class ArbolCapas {
 private:
