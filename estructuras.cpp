@@ -1,10 +1,6 @@
 #include "estructuras.h"
 #include <iostream>
 
-// ==========================================
-// IMPLEMENTACIÓN: ÁRBOL DE CAPAS
-// ==========================================
-
 ArbolCapas::ArbolCapas() {
     raiz = nullptr;
 }
@@ -14,7 +10,6 @@ NodoArbolCapas* ArbolCapas::insertarRecursivo(NodoArbolCapas* nodo, int id) {
         NodoArbolCapas* nuevo = new NodoArbolCapas();
         nuevo->idCapa = id;
         
-        // CONEXIÓN: Cada capa se inicializa con su propia Matriz Dispersa viva
         MatrizDispersa* nuevaMatriz = new MatrizDispersa();
         nuevo->raizMatriz = nuevaMatriz->getRaiz();
         
@@ -52,9 +47,6 @@ NodoArbolCapas* ArbolCapas::getRaiz() {
     return raiz;
 }
 
-// ==========================================
-// IMPLEMENTACIÓN: LISTA CIRCULAR DE IMÁGENES
-// ==========================================
 
 ListaImagenes::ListaImagenes() {
     primero = nullptr;
@@ -133,9 +125,6 @@ NodoImagen* ListaImagenes::getPrimero() {
     return primero;
 }
 
-// ==========================================
-// IMPLEMENTACIÓN: ÁRBOL DE USUARIOS
-// ==========================================
 
 ArbolUsuarios::ArbolUsuarios() {
     raiz = nullptr;
@@ -196,9 +185,6 @@ NodoUsuario* ArbolUsuarios::getRaiz() {
     return raiz;
 }
 
-// ==========================================
-// IMPLEMENTACIÓN: MATRIZ DISPERSA
-// ==========================================
 
 MatrizDispersa::MatrizDispersa() {
     raiz = new NodoMatriz();
