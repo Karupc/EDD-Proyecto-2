@@ -185,7 +185,6 @@ NodoUsuario* ArbolUsuarios::getRaiz() {
     return raiz;
 }
 
-
 MatrizDispersa::MatrizDispersa() {
     raiz = new NodoMatriz();
     raiz->fila = -1;

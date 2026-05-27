@@ -51,7 +51,6 @@ struct NodoUsuario {
 class MatrizDispersa {
 private:
     NodoMatriz* raiz;
-
     NodoMatriz* crearCabeceraFila(int fila);
     NodoMatriz* crearCabeceraColumna(int columna);
 
