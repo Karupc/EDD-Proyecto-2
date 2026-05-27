@@ -4,6 +4,8 @@
 #include "sistema.h"
 
 int main() {
+    system("chcp 65001 > nul");
+
     ArbolCapas sistemaCapas;
     ListaImagenes sistemaImagenes;
     ArbolUsuarios sistemaUsuarios;
