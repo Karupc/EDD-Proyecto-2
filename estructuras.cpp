@@ -1,5 +1,6 @@
 #include "estructuras.h"
 #include <iostream>
+#include <fstream>
 
 ArbolCapas::ArbolCapas() {
     raiz = nullptr;
@@ -10,6 +11,7 @@ NodoArbolCapas* ArbolCapas::insertarRecursivo(NodoArbolCapas* nodo, int id) {
         NodoArbolCapas* nuevo = new NodoArbolCapas();
         nuevo->idCapa = id;
         
+        // Corrección de persistencia de la matriz
         MatrizDispersa* nuevaMatriz = new MatrizDispersa();
         nuevo->raizMatriz = nuevaMatriz->getRaiz();
         
@@ -288,4 +290,125 @@ void MatrizDispersa::insertarPixel(int fila, int columna, std::string colorHex) 
 
 NodoMatriz* MatrizDispersa::getRaiz() {
     return raiz;
+}
+
+
+void ArbolUsuarios::generarDotRecursivo(NodoUsuario* nodo, std::ofstream& archivo) {
+    if (nodo == nullptr) return;
+
+    archivo << "    \"" << nodo->nombre << "\" [label=\"" << nodo->nombre << "\" shape=box];\n";
+
+    if (nodo->izquierdo != nullptr) {
+        archivo << "    \"" << nodo->nombre << "\" -> \"" << nodo->izquierdo->nombre << "\" [label=\"izq\"];\n";
+        generarDotRecursivo(nodo->izquierdo, archivo);
+    }
+
+    if (nodo->derecho != nullptr) {
+        archivo << "    \"" << nodo->nombre << "\" -> \"" << nodo->derecho->nombre << "\" [label=\"der\"];\n";
+        generarDotRecursivo(nodo->derecho, archivo);
+    }
+}
+
+void ArbolUsuarios::generarReporte() {
+    std::ofstream archivo("reporte_usuarios.dot");
+    if (!archivo.is_open()) {
+        std::cout << "[Error] No se pudo crear el archivo del reporte." << std::endl;
+        return;
+    }
+
+    archivo << "digraph G {\n";
+    archivo << "    node [fontname=\"Arial\", shape=box];\n";
+    archivo << "    label=\"REPORTE ARBOL DE USUARIOS\";\n";
+
+    if (raiz == nullptr) {
+        // Si está vacío, le metemos nodos de prueba para ver si genera el archivo
+        archivo << "    \"Usuario_Prueba_1\" -> \"Usuario_Prueba_2\";\n";
+        archivo << "    \"Usuario_Prueba_1\" -> \"Usuario_Prueba_3\";\n";
+    } else {
+        generarDotRecursivo(raiz, archivo);
+    }
+
+    archivo << "}\n";
+    
+    archivo.flush(); // <-- CRÍTICO: Obliga a Windows a escribir el archivo YA.
+    archivo.close();
+    
+    std::cout << "[OK] Archivo 'reporte_usuarios.dot' generado con exito." << std::endl;
+}
+
+void ArbolCapas::generarDotRecursivo(NodoArbolCapas* nodo, std::ofstream& archivo) {
+    if (nodo == nullptr) return;
+
+    // Nodo actual (Guardando los IDs de las capas)
+    archivo << "    " << nodo->idCapa << " [label=\"Capa " << nodo->idCapa << "\" shape=ellipse];\n";
+
+    if (nodo->izquierdo != nullptr) {
+        archivo << "    " << nodo->idCapa << " -> " << nodo->izquierdo->idCapa << " [label=\"izq\"];\n";
+        generarDotRecursivo(nodo->izquierdo, archivo);
+    }
+
+    if (nodo->derecho != nullptr) {
+        archivo << "    " << nodo->idCapa << " -> " << nodo->derecho->idCapa << " [label=\"der\"];\n";
+        generarDotRecursivo(nodo->derecho, archivo);
+    }
+}
+
+void ArbolCapas::generarReporte() {
+    std::ofstream archivo("reporte_capas.dot");
+    if (!archivo.is_open()) {
+        std::cout << "[Error] No se pudo crear el archivo del reporte de capas." << std::endl;
+        return;
+    }
+
+    archivo << "digraph G {\n";
+    archivo << "    node [fontname=\"Arial\"];\n";
+    archivo << "    label=\"REPORTE ARBOL DE CAPAS\";\n";
+
+    if (raiz == nullptr) {
+        archivo << "    \"Arbol de Capas Vacio\" [shape=none];\n";
+    } else {
+        generarDotRecursivo(raiz, archivo);
+    }
+
+    archivo << "}\n";
+    archivo.flush();
+    archivo.close();
+    std::cout << "[OK] Archivo 'reporte_capas.dot' generado con exito." << std::endl;
+}
+
+void ListaImagenes::generarReporte() {
+    std::ofstream archivo("reporte_imagenes.dot");
+    if (!archivo.is_open()) {
+        std::cout << "[Error] No se pudo crear el archivo del reporte de imagenes." << std::endl;
+        return;
+    }
+
+    archivo << "digraph G {\n";
+    archivo << "    rankdir=LR;\n"; // Hace que la lista se dibuje de izquierda a derecha
+    archivo << "    node [fontname=\"Arial\", shape=box];\n";
+    archivo << "    label=\"REPORTE LISTA DOBLE CIRCULAR DE IMAGENES\";\n";
+
+    if (primero == nullptr) {
+        archivo << "    \"Lista de Imagenes Vacia\" [shape=none];\n";
+    } else {
+        NodoImagen* actual = primero; // Nota: Si tu struct exacto se llama NodoImagen, cámbialo a NodoImagen*
+        
+        // Recorrer para declarar los nodos y sus enlaces siguientes
+        do {
+            archivo << "    \"Img_" << actual->idImagen << "\" [label=\"Imagen " << actual->idImagen << "\"];\n";
+            
+            // Flecha al siguiente
+            archivo << "    \"Img_" << actual->idImagen << "\" -> \"Img_" << actual->siguiente->idImagen << "\" [constraint=true, label=\"sig\"];\n";
+            
+            // Flecha al anterior
+            archivo << "    \"Img_" << actual->idImagen << "\" -> \"Img_" << actual->anterior->idImagen << "\" [constraint=true, label=\"ant\"];\n";
+            
+            actual = actual->siguiente;
+        } while (actual != primero);
+    }
+
+    archivo << "}\n";
+    archivo.flush();
+    archivo.close();
+    std::cout << "[OK] Archivo 'reporte_imagenes.dot' generado con exito." << std::endl;
 }

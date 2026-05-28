@@ -1,0 +1,7 @@
+digraph G {
+    node [fontname="Arial"];
+    label="REPORTE ARBOL DE CAPAS";
+    2 [label="Capa 2" shape=ellipse];
+    2 -> 3 [label="der"];
+    3 [label="Capa 3" shape=ellipse];
+}
