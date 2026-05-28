@@ -1,167 +1,344 @@
-#include <fstream> 
 #include <iostream>
 #include <string>
+#include <limits>
 #include "estructuras.h"
-#include "sistema.h" 
+#include "sistema.h"
 
-int main() {
-    // Configura la consola para soportar eñes, tildes y caracteres UTF-8
-    system("chcp 65001 > nul");
+void limpiarBuffer() {
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
 
-    ArbolCapas sistemaCapas;
-    ListaImagenes sistemaImagenes;
-    ArbolUsuarios sistemaUsuarios;
+int leerEntero(const std::string& mensaje) {
+    int valor;
+    std::cout << mensaje;
+    while (!(std::cin >> valor)) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "[Error] Ingresa un número válido. " << mensaje;
+    }
+    limpiarBuffer();
+    return valor;
+}
+
+std::string leerTexto(const std::string& mensaje) {
+    std::string valor;
+    std::cout << mensaje;
+    std::getline(std::cin, valor);
+    return valor;
+}
+
+void menuCargaMasiva(ArbolCapas& capas, ListaImagenes& imagenes, ArbolUsuarios& usuarios) {
     CargaMasiva lector;
 
-    int opcion = 0;
+    std::cout << "\n--- CARGA MASIVA DE DATOS ---" << std::endl;
+    std::cout << "Nota: el orden debe ser 1) Capas  2) Imágenes  3) Usuarios" << std::endl;
 
-    while (opcion != 4) {
-        std::cout << "\n====================================" << std::endl;
-        std::cout << "     GENERADOR DE IMÁGENES - MENU    " << std::endl;
-        std::cout << "====================================" << std::endl;
-        std::cout << "1. Carga Masiva de datos" << std::endl;
-        std::cout << "2. Gestión de Estructuras (Verificar Memoria)" << std::endl;
-        std::cout << "3. Generar Reportes Graphviz" << std::endl;
-        std::cout << "4. Salir del programa" << std::endl;
-        std::cout << "Seleccione una opción: ";
-        
-        std::cin >> opcion;
+    std::string arcCapas = leerTexto("Archivo de Capas (.cap) [Enter para omitir]: ");
+    if (!arcCapas.empty()) lector.cargarCapas(arcCapas, capas);
 
-        // Validación por si el usuario mete una letra por error
-        if (std::cin.fail()) {
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-            continue;
+    std::string arcImagenes = leerTexto("Archivo de Imágenes (.im) [Enter para omitir]: ");
+    if (!arcImagenes.empty()) lector.cargarImagenes(arcImagenes, imagenes, capas);
+
+    std::string arcUsuarios = leerTexto("Archivo de Usuarios (.usr) [Enter para omitir]: ");
+    if (!arcUsuarios.empty()) lector.cargarUsuarios(arcUsuarios, usuarios);
+}
+
+void menuGeneracion(ArbolCapas& capas, ListaImagenes& imagenes, ArbolUsuarios& usuarios) {
+    int op = 0;
+    do {
+        std::cout << "\n--- GENERACIÓN DE IMÁGENES ---" << std::endl;
+        std::cout << "1. Por recorrido limitado (Preorden / Inorden / Postorden)" << std::endl;
+        std::cout << "2. Por lista de imágenes (ID de imagen)" << std::endl;
+        std::cout << "3. Por capa (ID de capa)" << std::endl;
+        std::cout << "4. Por usuario" << std::endl;
+        std::cout << "0. Volver" << std::endl;
+        op = leerEntero("Opción: ");
+
+        if (op == 1) {
+            // ---------- Por recorrido limitado ----------
+            int numCapas = leerEntero("Número de capas a utilizar: ");
+            std::cout << "Tipo de recorrido:" << std::endl;
+            std::cout << "  1. Inorden" << std::endl;
+            std::cout << "  2. Preorden" << std::endl;
+            std::cout << "  3. Postorden" << std::endl;
+            int tipo = leerEntero("Opción: ");
+            if (tipo < 1 || tipo > 3) {
+                std::cout << "[Error] Tipo inválido." << std::endl;
+            } else {
+                capas.generarImagenPorRecorrido(numCapas, tipo);
+            }
+
+        } else if (op == 2) {
+            // ---------- Por lista de imágenes ----------
+            int idImg = leerEntero("ID de la imagen a generar: ");
+            imagenes.generarImagenPorId(idImg);
+
+        } else if (op == 3) {
+            // ---------- Por capa ----------
+            int idCapa = leerEntero("ID de la capa a generar: ");
+            NodoArbolCapas* nCapa = capas.buscar(idCapa);
+            if (nCapa == nullptr) {
+                std::cout << "[Error] Capa con ID " << idCapa << " no encontrada." << std::endl;
+            } else {
+                std::string salida = "imagen_capa_" + std::to_string(idCapa);
+                generarImagenDesdeCapa(nCapa, salida);
+            }
+
+        } else if (op == 4) {
+            // ---------- Por usuario ----------
+            if (usuarios.getRaiz() == nullptr) {
+                std::cout << "[!] No hay usuarios registrados." << std::endl;
+            } else {
+                std::cout << "Usuarios disponibles:" << std::endl;
+                usuarios.listarUsuarios();
+                std::string nombre = leerTexto("Nombre del usuario: ");
+                NodoUsuario* usr = usuarios.buscar(nombre);
+                if (usr == nullptr) {
+                    std::cout << "[Error] Usuario '" << nombre << "' no encontrado." << std::endl;
+                } else {
+                    // Mostrar imágenes del usuario
+                    NodoListaImagenesUsuario* li = usr->imagenesPoseidas;
+                    if (li == nullptr) {
+                        std::cout << "[!] Este usuario no tiene imágenes registradas." << std::endl;
+                    } else {
+                        std::cout << "Imágenes del usuario " << nombre << ": ";
+                        while (li != nullptr) {
+                            std::cout << li->idImagen << " ";
+                            li = li->siguiente;
+                        }
+                        std::cout << std::endl;
+                        int idImg = leerEntero("ID de la imagen a generar: ");
+                        imagenes.generarImagenPorId(idImg);
+                    }
+                }
+            }
         }
-        std::cin.ignore(10000, '\n');
+    } while (op != 0);
+}
+
+void menuCrudUsuarios(ArbolUsuarios& usuarios) {
+    int op = 0;
+    do {
+        std::cout << "\n--- CRUD USUARIOS ---" << std::endl;
+        std::cout << "1. Agregar usuario" << std::endl;
+        std::cout << "2. Eliminar usuario" << std::endl;
+        std::cout << "3. Modificar usuario (cambiar nombre)" << std::endl;
+        std::cout << "4. Listar usuarios" << std::endl;
+        std::cout << "0. Volver" << std::endl;
+        op = leerEntero("Opción: ");
+
+        if (op == 1) {
+            std::string nombre = leerTexto("Nombre del nuevo usuario: ");
+            if (nombre.empty()) { std::cout << "[Error] El nombre no puede estar vacío." << std::endl; continue; }
+            if (usuarios.buscar(nombre) != nullptr) {
+                std::cout << "[Error] Ya existe un usuario con ese nombre." << std::endl;
+            } else {
+                usuarios.insertar(nombre);
+                std::cout << "[OK] Usuario '" << nombre << "' agregado." << std::endl;
+            }
+
+        } else if (op == 2) {
+            std::cout << "Usuarios actuales:" << std::endl;
+            usuarios.listarUsuarios();
+            std::string nombre = leerTexto("Nombre del usuario a eliminar: ");
+            if (usuarios.eliminar(nombre)) {
+                std::cout << "[OK] Usuario '" << nombre << "' eliminado." << std::endl;
+            } else {
+                std::cout << "[Error] Usuario '" << nombre << "' no encontrado." << std::endl;
+            }
+
+        } else if (op == 3) {
+            std::cout << "Usuarios actuales:" << std::endl;
+            usuarios.listarUsuarios();
+            std::string nombreActual = leerTexto("Nombre actual del usuario: ");
+            NodoUsuario* usr = usuarios.buscar(nombreActual);
+            if (usr == nullptr) {
+                std::cout << "[Error] Usuario '" << nombreActual << "' no encontrado." << std::endl;
+            } else {
+                std::string nuevoNombre = leerTexto("Nuevo nombre: ");
+                if (nuevoNombre.empty()) { std::cout << "[Error] El nombre no puede estar vacío." << std::endl; continue; }
+                if (usuarios.buscar(nuevoNombre) != nullptr) {
+                    std::cout << "[Error] Ya existe un usuario con ese nombre." << std::endl;
+                } else {
+                    // Guardar lista de imágenes, eliminar y reinsertar
+                    NodoListaImagenesUsuario* imgs = usr->imagenesPoseidas;
+                    usr->imagenesPoseidas = nullptr; // desconectar para que no se borre al eliminar
+                    usuarios.eliminar(nombreActual);
+                    usuarios.insertar(nuevoNombre);
+                    NodoUsuario* nuevo = usuarios.buscar(nuevoNombre);
+                    nuevo->imagenesPoseidas = imgs;
+                    std::cout << "[OK] Usuario renombrado a '" << nuevoNombre << "'." << std::endl;
+                }
+            }
+
+        } else if (op == 4) {
+            std::cout << "Usuarios registrados:" << std::endl;
+            usuarios.listarUsuarios();
+        }
+    } while (op != 0);
+}
+
+void menuCrudImagenes(ListaImagenes& imagenes, ArbolCapas& capas, ArbolUsuarios& usuarios) {
+    int op = 0;
+    do {
+        std::cout << "\n--- CRUD IMÁGENES ---" << std::endl;
+        std::cout << "1. Agregar imagen (con capas)" << std::endl;
+        std::cout << "2. Eliminar imagen" << std::endl;
+        std::cout << "0. Volver" << std::endl;
+        op = leerEntero("Opción: ");
+
+        if (op == 1) {
+            // Seleccionar usuario
+            std::cout << "Usuarios disponibles:" << std::endl;
+            usuarios.listarUsuarios();
+            std::string nombre = leerTexto("Nombre del usuario al que se asignará: ");
+            NodoUsuario* usr = usuarios.buscar(nombre);
+            if (usr == nullptr) {
+                std::cout << "[Error] Usuario no encontrado." << std::endl; continue;
+            }
+
+            int idImg = leerEntero("ID de la nueva imagen: ");
+            if (imagenes.buscar(idImg) != nullptr) {
+                std::cout << "[Error] Ya existe una imagen con ID " << idImg << std::endl;
+                continue;
+            }
+
+            imagenes.insertar(idImg);
+            usuarios.agregarImagenAUsuario(nombre, idImg);
+
+            // Agregar capas
+            std::cout << "Ingrese IDs de capas a agregar (0 para terminar):" << std::endl;
+            while (true) {
+                int idCapa = leerEntero("  ID de capa: ");
+                if (idCapa == 0) break;
+                NodoArbolCapas* nc = capas.buscar(idCapa);
+                if (nc == nullptr) {
+                    std::cout << "  [Advertencia] Capa " << idCapa << " no existe, ignorada." << std::endl;
+                } else {
+                    imagenes.agregarCapaAImagen(idImg, nc);
+                    std::cout << "  [OK] Capa " << idCapa << " agregada a imagen " << idImg << std::endl;
+                }
+            }
+            std::cout << "[OK] Imagen " << idImg << " creada y asignada a " << nombre << std::endl;
+
+        } else if (op == 2) {
+            std::cout << "Usuarios disponibles:" << std::endl;
+            usuarios.listarUsuarios();
+            std::string nombre = leerTexto("Nombre del usuario dueño de la imagen: ");
+            NodoUsuario* usr = usuarios.buscar(nombre);
+            if (usr == nullptr) {
+                std::cout << "[Error] Usuario no encontrado." << std::endl; continue;
+            }
+
+            NodoListaImagenesUsuario* li = usr->imagenesPoseidas;
+            if (li == nullptr) {
+                std::cout << "[!] Este usuario no tiene imágenes." << std::endl; continue;
+            }
+            std::cout << "Imágenes del usuario: ";
+            while (li != nullptr) { std::cout << li->idImagen << " "; li = li->siguiente; }
+            std::cout << std::endl;
+
+            int idImg = leerEntero("ID de la imagen a eliminar: ");
+
+            // Eliminar de la lista del usuario
+            usuarios.eliminarImagenDeUsuario(nombre, idImg);
+            // Eliminar de la lista circular global
+            if (imagenes.eliminar(idImg)) {
+                std::cout << "[OK] Imagen " << idImg << " eliminada." << std::endl;
+            } else {
+                std::cout << "[Error] Imagen " << idImg << " no encontrada en la lista global." << std::endl;
+            }
+        }
+    } while (op != 0);
+}
+
+void menuReportes(ArbolCapas& capas, ListaImagenes& imagenes, ArbolUsuarios& usuarios) {
+    int op = 0;
+    do {
+        std::cout << "\n--- ESTADO DE MEMORIA / REPORTES ---" << std::endl;
+        std::cout << "1. Ver árbol de capas" << std::endl;
+        std::cout << "2. Ver lista de imágenes (con capas de cada una)" << std::endl;
+        std::cout << "3. Ver árbol de usuarios" << std::endl;
+        std::cout << "4. Ver capa (Matriz Dispersa)" << std::endl;
+        std::cout << "5. Ver imagen + árbol de capas combinado" << std::endl;
+        std::cout << "0. Volver" << std::endl;
+        op = leerEntero("Opción: ");
+
+        if (op == 1) {
+            capas.generarReporte();
+
+        } else if (op == 2) {
+            imagenes.generarReporte();
+
+        } else if (op == 3) {
+            usuarios.generarReporte();
+
+        } else if (op == 4) {
+            int idCapa = leerEntero("ID de la capa a visualizar: ");
+            NodoArbolCapas* nCapa = capas.buscar(idCapa);
+            if (nCapa == nullptr) {
+                std::cout << "[Error] Capa " << idCapa << " no encontrada." << std::endl;
+            } else {
+                MatrizDispersa mat;
+                if (nCapa->raizMatriz != nullptr) {
+                    mat.setRaizManual(nCapa->raizMatriz);
+                }
+                mat.generarReporte(idCapa);
+            }
+
+        } else if (op == 5) {
+            int idImg = leerEntero("ID de la imagen: ");
+            imagenes.generarReporteImagenYArbol(idImg, capas.getRaiz());
+        }
+    } while (op != 0);
+}
+
+int main() {
+    // UTF-8 en Windows (no afecta Linux/Mac)
+    #ifdef _WIN32
+    system("chcp 65001 > nul");
+    #endif
+
+    ArbolCapas    sistemaCapas;
+    ListaImagenes sistemaImagenes;
+    ArbolUsuarios sistemaUsuarios;
+
+    int opcion = -1;
+
+    while (opcion != 0) {
+        std::cout << "\n========================================" << std::endl;
+        std::cout << "    GENERADOR DE IMÁGENES POR CAPAS    " << std::endl;
+        std::cout << "========================================" << std::endl;
+        std::cout << "1. Carga Masiva de datos" << std::endl;
+        std::cout << "2. Generación de imágenes" << std::endl;
+        std::cout << "3. CRUD Usuarios" << std::endl;
+        std::cout << "4. CRUD Imágenes" << std::endl;
+        std::cout << "5. Estado de la memoria / Reportes" << std::endl;
+        std::cout << "0. Salir" << std::endl;
+        opcion = leerEntero("Seleccione una opción: ");
 
         switch (opcion) {
-            case 1: {
-                std::string arcCapas, arcImagenes, arcUsuarios;
-                
-                std::cout << "\n--- CARGA MASIVA DE ARCHIVOS ---" << std::endl;
-                
-                std::cout << "Ingrese nombre del archivo de Capas (.cap): ";
-                std::getline(std::cin, arcCapas);
-                if (!arcCapas.empty()) {
-                    lector.cargarCapas(arcCapas, sistemaCapas);
-                }
-
-                std::cout << "Ingrese nombre del archivo de Imagenes (.im): ";
-                std::getline(std::cin, arcImagenes);
-                if (!arcImagenes.empty()) {
-                    lector.cargarImagenes(arcImagenes, sistemaImagenes, sistemaCapas);
-                }
-
-                std::cout << "Ingrese nombre del archivo de Usuarios (.usr): ";
-                std::getline(std::cin, arcUsuarios);
-                if (!arcUsuarios.empty()) {
-                    lector.cargarUsuarios(arcUsuarios, sistemaUsuarios);
-                }
-                
+            case 1:
+                menuCargaMasiva(sistemaCapas, sistemaImagenes, sistemaUsuarios);
                 break;
-            }
-                
-            case 2: {
-                std::cout << "\n--- ESTADO ACTUAL DE LA MEMORIA ---" << std::endl;
-                
-                // 1. Verificar Árbol de Usuarios
-                std::cout << "\n[1/3] Verificando Árbol de Usuarios..." << std::endl;
-                NodoUsuario* raizUsr = sistemaUsuarios.getRaiz();
-                if (raizUsr != nullptr) {
-                    std::cout << "  -> [OK] El árbol de usuarios tiene una raíz válida." << std::endl;
-                    std::cout << "  -> Usuario raíz detectado: " << raizUsr->nombre << std::endl;
-                } else {
-                    std::cout << "  -> [!] El árbol de usuarios está VACÍO." << std::endl;
-                }
-
-                // 2. Verificar Lista de Imágenes
-                std::cout << "\n[2/3] Verificando Lista de Imágenes..." << std::endl;
-                NodoImagen* primeroImg = sistemaImagenes.getPrimero();
-                if (primeroImg != nullptr) {
-                    std::cout << "  -> [OK] La lista de imágenes tiene datos en memoria." << std::endl;
-                    std::cout << "  -> Primera imagen en la lista: ID " << primeroImg->idImagen << std::endl;
-                } else {
-                    std::cout << "  -> [!] La lista de imágenes está VACÍA." << std::endl;
-                }
-
-                // 3. Verificar Árbol de Capas y sus Matrices
-                std::cout << "\n[3/3] Verificando Árbol de Capas..." << std::endl;
-                NodoArbolCapas* raizCapas = sistemaCapas.getRaiz();
-                if (raizCapas != nullptr) {
-                    std::cout << "  -> [OK] El árbol de capas tiene datos en memoria." << std::endl;
-                    std::cout << "  -> Capa en la raíz del árbol: ID " << raizCapas->idCapa << std::endl;
-                    if (raizCapas->raizMatriz != nullptr) {
-                        std::cout << "     [Matriz] Esta capa ya inicializó su Matriz Dispersa." << std::endl;
-                    } else {
-                        std::cout << "     [Matriz] Esta capa aún no tiene píxeles en su matriz." << std::endl;
-                    }
-                } else {
-                    std::cout << "  -> [!] El árbol de capas está VACÍO." << std::endl;
-                }
-                
-                std::cout << "\n====================================" << std::endl;
+            case 2:
+                menuGeneracion(sistemaCapas, sistemaImagenes, sistemaUsuarios);
                 break;
-            }
-                
-            case 3: {
-                std::cout << "\n========================================" << std::endl;
-                std::cout << "     MENU DE REPORTES - ACTUALIZADO     " << std::endl;
-                std::cout << "========================================" << std::endl;
-                std::cout << "1. Reporte del Arbol de Usuarios" << std::endl;
-                std::cout << "2. Reporte del Arbol de Capas" << std::endl;
-                std::cout << "3. Reporte de la Lista de Imagenes" << std::endl;
-                std::cout << "4. Reporte de la Matriz Dispersa (Capa)" << std::endl;
-                std::cout << "Seleccione que reporte desea generar: ";
-                
-                int subOpcion = 0;
-                std::cin >> subOpcion;
-                std::cin.ignore(10000, '\n');
-
-                if (subOpcion == 1) {
-                    sistemaUsuarios.generarReporte();
-                } 
-                else if (subOpcion == 2) {
-                    sistemaCapas.generarReporte();
-                } 
-                else if (subOpcion == 3) {
-                    sistemaImagenes.generarReporte();
-                } else if (subOpcion == 4) {
-                    std::cout << "Ingrese el ID de la capa que desea graficar: ";
-                    int idBuscado;
-                    std::cin >> idBuscado;
-                    std::cin.ignore(10000, '\n');
-
-                    // Buscamos la capa en el árbol binario
-                    NodoArbolCapas* nodoCapa = sistemaCapas.buscar(idBuscado);
-                    if (nodoCapa != nullptr) {
-                        std::cout << "[!] Generando estructura de matriz..." << std::endl;
-                        
-                        // Usamos la clase MatrizDispersa
-                        MatrizDispersa matrizAux;
-                        
-                        // Le pasamos la raíz real que tiene los píxeles de la capa
-                        matrizAux.setRaizManual(nodoCapa->raizMatriz);
-                        
-                        // Disparamos el reporte real
-                        matrizAux.generarReporte(idBuscado);
-                        
-                    } else {
-                        std::cout << "[Error] La capa con ID " << idBuscado << " no existe." << std::endl;
-                    }
-                }
-                else {
-                    std::cout << "[!] Opcion invalida, regresando..." << std::endl;
-                }
+            case 3:
+                menuCrudUsuarios(sistemaUsuarios);
                 break;
-            }
-
             case 4:
-                std::cout << "\n¡Saliendo del sistema! Feliz dia.\n" << std::endl;
+                menuCrudImagenes(sistemaImagenes, sistemaCapas, sistemaUsuarios);
                 break;
-                
+            case 5:
+                menuReportes(sistemaCapas, sistemaImagenes, sistemaUsuarios);
+                break;
+            case 0:
+                std::cout << "\n¡Hasta luego!\n" << std::endl;
+                break;
             default:
-                std::cout << "\n[Error] Opcion invalida.\n" << std::endl;
+                std::cout << "[Error] Opción inválida.\n" << std::endl;
         }
     }
 
