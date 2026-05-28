@@ -149,26 +149,35 @@ void menuCrudUsuarios(ArbolUsuarios& usuarios) {
             }
 
         } else if (op == 3) {
+            // Modificar = agregar o eliminar imágenes del usuario
             std::cout << "Usuarios actuales:" << std::endl;
             usuarios.listarUsuarios();
-            std::string nombreActual = leerTexto("Nombre actual del usuario: ");
+            std::string nombreActual = leerTexto("Nombre del usuario a modificar: ");
             NodoUsuario* usr = usuarios.buscar(nombreActual);
             if (usr == nullptr) {
                 std::cout << "[Error] Usuario '" << nombreActual << "' no encontrado." << std::endl;
             } else {
-                std::string nuevoNombre = leerTexto("Nuevo nombre: ");
-                if (nuevoNombre.empty()) { std::cout << "[Error] El nombre no puede estar vacío." << std::endl; continue; }
-                if (usuarios.buscar(nuevoNombre) != nullptr) {
-                    std::cout << "[Error] Ya existe un usuario con ese nombre." << std::endl;
+                std::cout << "Imagenes actuales de " << nombreActual << ": ";
+                NodoListaImagenesUsuario* li = usr->imagenesPoseidas;
+                if (li == nullptr) std::cout << "(ninguna)";
+                while (li != nullptr) { std::cout << li->idImagen << " "; li = li->siguiente; }
+                std::cout << std::endl;
+
+                std::cout << "Que desea hacer?" << std::endl;
+                std::cout << "  1. Agregar imagen al usuario" << std::endl;
+                std::cout << "  2. Eliminar imagen del usuario" << std::endl;
+                int subOp = leerEntero("Opcion: ");
+
+                if (subOp == 1) {
+                    int idImg = leerEntero("ID de la imagen a agregar: ");
+                    usuarios.agregarImagenAUsuario(nombreActual, idImg);
+                    std::cout << "[OK] Imagen " << idImg << " agregada a " << nombreActual << std::endl;
+                } else if (subOp == 2) {
+                    int idImg = leerEntero("ID de la imagen a eliminar: ");
+                    usuarios.eliminarImagenDeUsuario(nombreActual, idImg);
+                    std::cout << "[OK] Imagen " << idImg << " eliminada de " << nombreActual << std::endl;
                 } else {
-                    // Guardar lista de imágenes, eliminar y reinsertar
-                    NodoListaImagenesUsuario* imgs = usr->imagenesPoseidas;
-                    usr->imagenesPoseidas = nullptr; // desconectar para que no se borre al eliminar
-                    usuarios.eliminar(nombreActual);
-                    usuarios.insertar(nuevoNombre);
-                    NodoUsuario* nuevo = usuarios.buscar(nuevoNombre);
-                    nuevo->imagenesPoseidas = imgs;
-                    std::cout << "[OK] Usuario renombrado a '" << nuevoNombre << "'." << std::endl;
+                    std::cout << "[Error] Opcion invalida." << std::endl;
                 }
             }
 
