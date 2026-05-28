@@ -58,6 +58,8 @@ public:
     MatrizDispersa();
     void insertarPixel(int fila, int columna, std::string colorHex);
     NodoMatriz* getRaiz();
+    void generarReporte(int idCapa);
+    void setRaizManual(NodoMatriz* nuevaRaiz);
 };
 
 class ArbolCapas {

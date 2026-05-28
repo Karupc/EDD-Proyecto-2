@@ -1,6 +1,0 @@
-x   4digraph G {
-    node [fontname="Arial", shape=box];
-    label="REPORTE ARBOL DE USUARIOS";
-    "Usuario_Prueba_1" -> "Usuario_Prueba_2";
-    "Usuario_Prueba_1" -> "Usuario_Prueba_3";
-}

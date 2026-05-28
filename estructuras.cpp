@@ -412,3 +412,128 @@ void ListaImagenes::generarReporte() {
     archivo.close();
     std::cout << "[OK] Archivo 'reporte_imagenes.dot' generado con exito." << std::endl;
 }
+
+void MatrizDispersa::generarReporte(int idCapa) {
+    std::string nombreArchivo = "reporte_matriz_capa_" + std::to_string(idCapa) + ".dot";
+    std::ofstream archivo(nombreArchivo);
+    if (!archivo.is_open()) {
+        std::cout << "[Error] No se pudo crear el archivo de la matriz." << std::endl;
+        return;
+    }
+
+    // Cabecera estándar de Graphviz para matrices ortogonales
+    archivo << "digraph G {\n";
+    archivo << "    node [fontname=\"Arial\", shape=box, width=0.7, height=0.7];\n";
+    archivo << "    label=\"REPORTE MATRIZ DISPERSA - CAPA " << idCapa << "\";\n";
+    archivo << "    rankdir=TB;\n";
+    archivo << "    nodesep=0.4;\n";
+    archivo << "    ranksep=0.4;\n";
+
+    if (raiz->abajo == raiz && raiz->derecha == raiz) {
+        archivo << "    \"Matriz Vacia\" [shape=none];\n";
+        archivo << "}\n";
+        archivo.close();
+        return;
+    }
+
+    // 1. Declaración y alineación del Nodo RAÍZ con las Columnas
+    archivo << "    N_R [label=\"RAIZ\", group=0, style=filled, fillcolor=lightgray];\n";
+
+    // Declarar las cabeceras de columnas en el mismo nivel (rank=same) que la raíz
+    NodoMatriz* col = raiz->derecha;
+    archivo << "    { rank=same; N_R; ";
+    while (col != raiz) {
+        archivo << "N_C" << col->columna << "; ";
+        col = col->derecha;
+    }
+    archivo << "}\n";
+
+    // Estilo de los nodos de columnas
+    col = raiz->derecha;
+    while (col != raiz) {
+        archivo << "    N_C" << col->columna << " [label=\"C" << col->columna << "\", group=" << col->columna << ", style=filled, fillcolor=lightblue];\n";
+        col = col->derecha;
+    }
+
+    // Enlaces horizontales de la fila de cabecera de columnas
+    archivo << "    N_R -> N_C" << raiz->derecha->columna << " [dir=both];\n";
+    col = raiz->derecha;
+    while (col->derecha != raiz) {
+        archivo << "    N_C" << col->columna << " -> N_C" << col->derecha->columna << " [dir=both];\n";
+        col = col->derecha;
+    }
+
+    // 2. Recorrido por Filas y creación de Nodos Internos
+    NodoMatriz* fila = raiz->abajo;
+    while (fila != raiz) {
+        // Definir nodo de la cabecera de fila
+        archivo << "    N_F" << fila->fila << " [label=\"F" << fila->fila << "\", group=0, style=filled, fillcolor=lightpink];\n";
+        
+        // Alinear la cabecera de fila con todos sus nodos internos horizontalmente
+        archivo << "    { rank=same; N_F" << fila->fila << "; ";
+        NodoMatriz* pxl = fila->derecha;
+        while (pxl != fila) {
+            archivo << "N_F" << pxl->fila << "_C" << pxl->columna << "; ";
+            pxl = pxl->derecha;
+        }
+        archivo << "}\n";
+
+        // Imprimir las propiedades de los píxeles internos (Corregido el error de comillas y punto y coma)
+        pxl = fila->derecha;
+        while (pxl != fila) {
+            archivo << "    N_F" << pxl->fila << "_C" << pxl->columna 
+                    << " [label=\"" << pxl->colorHex << "\", group=" << pxl->columna 
+                    << ", style=filled, fillcolor=\"" << pxl->colorHex << "\", fontcolor=white];\n";
+            pxl = pxl->derecha;
+        }
+
+        // Enlaces horizontales de los nodos internos de esta fila
+        archivo << "    N_F" << fila->fila << " -> N_F" << fila->fila << "_C" << fila->derecha->columna << " [dir=both];\n";
+        pxl = fila->derecha;
+        while (pxl->derecha != fila) {
+            archivo << "    N_F" << pxl->fila << "_C" << pxl->columna << " -> N_F" << pxl->derecha->fila << "_C" << pxl->derecha->columna << " [dir=both];\n";
+            pxl = pxl->derecha;
+        }
+        // Cerrar el ciclo horizontal apuntando de vuelta a la cabecera (Lista circular)
+        archivo << "    N_F" << pxl->fila << "_C" << pxl->columna << " -> N_F" << fila->fila << " [dir=both];\n";
+
+        fila = fila->abajo;
+    }
+
+    // Enlaces verticales de la columna de cabecera de filas
+    archivo << "    N_R -> N_F" << raiz->abajo->fila << " [dir=both];\n";
+    fila = raiz->abajo;
+    while (fila->abajo != raiz) {
+        archivo << "    N_F" << fila->fila << " -> N_F" << fila->abajo->fila << " [dir=both];\n";
+        fila = fila->abajo;
+    }
+
+    // 3. Enlaces verticales de los nodos internos (REESTRUCTURADO Y CORREGIDO COMPLETAMENTE)
+    col = raiz->derecha;
+    while (col != raiz) {
+        NodoMatriz* pxl = col->abajo;
+        if (pxl != col) {
+            // Conexión desde la cabecera de columna al primer elemento hacia abajo
+            archivo << "    N_C" << col->columna << " -> N_F" << pxl->fila << "_C" << pxl->columna << " [dir=both];\n";
+            while (pxl->abajo != col) {
+                // Conexión entre nodos internos de la misma columna
+                archivo << "    N_F" << pxl->fila << "_C" << pxl->columna << " -> N_F" << pxl->abajo->fila << "_C" << pxl->abajo->columna << " [dir=both];\n";
+                pxl = pxl->abajo;
+            }
+            // Cierre del ciclo vertical hacia la cabecera de columna
+            archivo << "    N_F" << pxl->fila << "_C" << pxl->columna << " -> N_C" << col->columna << " [dir=both];\n";
+        }
+        col = col->derecha;
+    }
+
+    archivo << "}\n";
+    archivo.flush();
+    archivo.close();
+    std::cout << "[OK] Reporte de matriz de capa generado limpiamente." << std::endl;
+}
+
+void MatrizDispersa::setRaizManual(NodoMatriz* nuevaRaiz) {
+    if (nuevaRaiz != nullptr) {
+        this->raiz = nuevaRaiz;
+    }
+}

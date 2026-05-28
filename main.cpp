@@ -1,9 +1,11 @@
+#include <fstream> 
 #include <iostream>
 #include <string>
 #include "estructuras.h"
 #include "sistema.h" 
 
 int main() {
+    // Configura la consola para soportar eñes, tildes y caracteres UTF-8
     system("chcp 65001 > nul");
 
     ArbolCapas sistemaCapas;
@@ -25,6 +27,7 @@ int main() {
         
         std::cin >> opcion;
 
+        // Validación por si el usuario mete una letra por error
         if (std::cin.fail()) {
             std::cin.clear();
             std::cin.ignore(10000, '\n');
@@ -107,7 +110,8 @@ int main() {
                 std::cout << "========================================" << std::endl;
                 std::cout << "1. Reporte del Arbol de Usuarios" << std::endl;
                 std::cout << "2. Reporte del Arbol de Capas" << std::endl;
-                std::cout << "3. Reporte de la Lista de Imagenes" << std::endl; // <-- NUEVA LÍNEA
+                std::cout << "3. Reporte de la Lista de Imagenes" << std::endl;
+                std::cout << "4. Reporte de la Matriz Dispersa (Capa)" << std::endl;
                 std::cout << "Seleccione que reporte desea generar: ";
                 
                 int subOpcion = 0;
@@ -116,11 +120,37 @@ int main() {
 
                 if (subOpcion == 1) {
                     sistemaUsuarios.generarReporte();
-                } else if (subOpcion == 2) {
+                } 
+                else if (subOpcion == 2) {
                     sistemaCapas.generarReporte();
-                } else if (subOpcion == 3) {
-                    sistemaImagenes.generarReporte(); // <-- NUEVA ACCIÓN
-                } else {
+                } 
+                else if (subOpcion == 3) {
+                    sistemaImagenes.generarReporte();
+                } else if (subOpcion == 4) {
+                    std::cout << "Ingrese el ID de la capa que desea graficar: ";
+                    int idBuscado;
+                    std::cin >> idBuscado;
+                    std::cin.ignore(10000, '\n');
+
+                    // Buscamos la capa en el árbol binario
+                    NodoArbolCapas* nodoCapa = sistemaCapas.buscar(idBuscado);
+                    if (nodoCapa != nullptr) {
+                        std::cout << "[!] Generando estructura de matriz..." << std::endl;
+                        
+                        // Usamos la clase MatrizDispersa
+                        MatrizDispersa matrizAux;
+                        
+                        // Le pasamos la raíz real que tiene los píxeles de la capa
+                        matrizAux.setRaizManual(nodoCapa->raizMatriz);
+                        
+                        // Disparamos el reporte real
+                        matrizAux.generarReporte(idBuscado);
+                        
+                    } else {
+                        std::cout << "[Error] La capa con ID " << idBuscado << " no existe." << std::endl;
+                    }
+                }
+                else {
                     std::cout << "[!] Opcion invalida, regresando..." << std::endl;
                 }
                 break;
@@ -129,6 +159,7 @@ int main() {
             case 4:
                 std::cout << "\n¡Saliendo del sistema! Feliz dia.\n" << std::endl;
                 break;
+                
             default:
                 std::cout << "\n[Error] Opcion invalida.\n" << std::endl;
         }

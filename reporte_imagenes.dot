@@ -1,6 +1,0 @@
-digraph G {
-    rankdir=LR;
-    node [fontname="Arial", shape=box];
-    label="REPORTE LISTA DOBLE CIRCULAR DE IMAGENES";
-    "Lista de Imagenes Vacia" [shape=none];
-}
